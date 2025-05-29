@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+const allowedHost = process.env.ALLOWED_HOST || "";
+
 export default defineConfig({
   base: "/",
   plugins: [react()],
@@ -9,10 +11,9 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: [
-      "projekat2-alb-1030556733.us-east-1.elb.amazonaws.com",
+      allowedHost, 
       "localhost",
       "127.0.0.1",
     ],
-   
   },
 });

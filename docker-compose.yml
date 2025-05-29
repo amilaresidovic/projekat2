@@ -11,6 +11,8 @@ services:
       - app-network
     depends_on:
       - backend
+      environment:
+      - ALLOWED_HOST=projekat2-alb-1030556733.us-east-1.elb.amazonaws.com
 
   backend:
     build:
