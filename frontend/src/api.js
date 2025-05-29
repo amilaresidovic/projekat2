@@ -8,24 +8,28 @@ export async function getContacts() {
 export async function createContact(contactData) {
   const response = await fetch(`${BACKEND_URL}/create_contact`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(contactData),
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(contactData)
   });
   return await response.json();
 }
 
-export async function updateContact(userId, contactData) {
-  const response = await fetch(`${BACKEND_URL}/update_contact/${userId}`, {
+export async function updateContact(id, contactData) {
+  const response = await fetch(`${BACKEND_URL}/update_contact/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(contactData),
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(contactData)
   });
   return await response.json();
 }
 
-export async function deleteContact(userId) {
-  const response = await fetch(`${BACKEND_URL}/delete_contact/${userId}`, {
-    method: "DELETE",
+export async function deleteContact(id) {
+  const response = await fetch(`${BACKEND_URL}/delete_contact/${id}`, {
+    method: "DELETE"
   });
   return await response.json();
 }
