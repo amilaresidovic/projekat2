@@ -1,4 +1,4 @@
-const BACKEND_URL = "http://projekat2-alb-1658197143.us-east-1.elb.amazonaws.com/api";
+const BACKEND_URL = "/api";
 
 export async function getContacts() {
   const response = await fetch(`${BACKEND_URL}/contacts`);
