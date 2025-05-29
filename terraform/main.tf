@@ -196,7 +196,7 @@ resource "aws_db_instance" "postgres" {
   identifier              = "projekat2-db"
   allocated_storage       = 20
   engine                  = "postgres"
-  engine_version          = "15.4"
+  engine_version          = "15.3"
   instance_class          = "db.t3.micro"
   username                = "postgres"
   password                = "postgres123"
