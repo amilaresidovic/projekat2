@@ -180,7 +180,7 @@ sudo yum install -y docker git
 sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -aG docker ec2-user
-sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 git clone https://github.com/amilaresidovic/projekat2.git /home/ec2-user/projekat2
 cd /home/ec2-user/projekat2/backend
@@ -205,7 +205,7 @@ sudo yum install -y docker git
 sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -aG docker ec2-user
-sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
 git clone https://github.com/amilaresidovic/projekat2.git /home/ec2-user/projekat2
 cd /home/ec2-user/projekat2/frontend
@@ -270,7 +270,7 @@ resource "aws_lb_listener" "http_listener" {
   protocol          = "HTTP"
 
   default_action {
-    type             = "fixed-response"
+    type = "fixed-response"
     fixed_response {
       content_type = "text/plain"
       message_body = "Not found"
