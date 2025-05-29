@@ -42,12 +42,10 @@ resource "aws_subnet" "public_subnet_b" {
 
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
-
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
   }
-
   tags = { Name = "projekat2-public-rt" }
 }
 
@@ -126,25 +124,28 @@ resource "aws_db_subnet_group" "rds_subnet_group" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier             = "projekat2-postgres-db"
-  engine                 = "postgres"
-  engine_version         = "15.3"
-  instance_class         = "db.t3.micro"
-  allocated_storage      = var.ebs_size
-  db_name                   = "app_db"
-  username               = "postgres"
-  password               = "postgres123"  
-  parameter_group_name   = "default.postgres15"
-  publicly_accessible    = true
-  skip_final_snapshot    = true
+  identifier            = "projekat2-postgres-db"
+  engine                = "postgres"
+  engine_version        = "15.3"
+  instance_class        = "db.t3.micro"
+  allocated_storage     = var.ebs_size
+  username              = "postgres"
+  password              = "postgres123" # Promeni po potrebi
+  parameter_group_name  = "default.postgres15"
+  publicly_accessible   = true
+  skip_final_snapshot   = true
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
-  tags                   = { Name = "projekat2-postgres-rds" }
+  db_subnet_group_name  = aws_db_subnet_group.rds_subnet_group.name
+  tags                  = { Name = "projekat2-postgres-rds" }
 }
 
-
-data "template_file" "frontend_userdata" {
-  template = <<EOF
+resource "aws_instance" "frontend_instance" {
+  ami                    = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.public_subnet_a.id
+  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  key_name               = "vockey"
+  user_data              = <<EOF
 #!/bin/bash
 exec > /var/log/user-data.log 2>&1
 set -x
@@ -159,8 +160,8 @@ git clone ${var.repo_url} /home/ec2-user/projekat2
 cd /home/ec2-user/projekat2
 docker-compose up -d frontend
 EOF
+  tags = { Name = "projekat2-frontend-instance" }
 }
-
 
 data "template_file" "backend_userdata" {
   template = <<EOF
@@ -172,33 +173,19 @@ yum install -y docker git
 systemctl start docker
 systemctl enable docker
 usermod -aG docker ec2-user
-curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
-git clone ${var.repo_url} /home/ec2-user/projekat2
+git clone ${repo_url} /home/ec2-user/projekat2
 cd /home/ec2-user/projekat2
-
-
 echo "RDS_ENDPOINT=${rds_endpoint}" > .env
-
-
-sed -i "s/\${RDS_ENDPOINT}/${rds_endpoint}/g" docker-compose.yml
-
+sed -i "s/\\${RDS_ENDPOINT}/${rds_endpoint}/g" docker-compose.yml
 docker-compose up -d backend
 EOF
 
   vars = {
+    repo_url     = var.repo_url
     rds_endpoint = aws_db_instance.postgres.endpoint
   }
-}
-
-resource "aws_instance" "frontend_instance" {
-  ami                    = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-  instance_type          = var.instance_type
-  subnet_id              = aws_subnet.public_subnet_a.id
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  key_name               = "vockey"
-  user_data              = data.template_file.frontend_userdata.rendered
-  tags                   = { Name = "projekat2-frontend-instance" }
 }
 
 resource "aws_instance" "backend_instance" {
@@ -226,7 +213,6 @@ resource "aws_lb_target_group" "frontend_tg" {
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "instance"
-
   health_check {
     path                = "/"
     protocol            = "HTTP"
@@ -244,7 +230,6 @@ resource "aws_lb_target_group" "backend_tg" {
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "instance"
-
   health_check {
     path                = "/"
     protocol            = "HTTP"
@@ -272,7 +257,6 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app_alb.arn
   port              = 80
   protocol          = "HTTP"
-
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.frontend_tg.arn
@@ -282,12 +266,10 @@ resource "aws_lb_listener" "http" {
 resource "aws_lb_listener_rule" "backend_rule" {
   listener_arn = aws_lb_listener.http.arn
   priority     = 100
-
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.backend_tg.arn
   }
-
   condition {
     path_pattern {
       values = ["/api/*"]
