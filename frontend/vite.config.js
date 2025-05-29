@@ -8,6 +8,10 @@ export default defineConfig({
     port: 8080,
     strictPort: true,
     host: "0.0.0.0",
-    allowedHosts: "all",  
+    allowedHosts: [
+      "projekat2-alb-1658197143.us-east-1.elb.amazonaws.com",
+      "localhost",
+      "127.0.0.1",
+    ],
   },
 });
