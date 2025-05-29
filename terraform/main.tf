@@ -12,7 +12,6 @@ provider "aws" {
   region = var.region
 }
 
-# VPC i mrežni resursi
 
 resource "aws_vpc" "main" {
   cidr_block           = "172.16.0.0/16"
@@ -50,14 +49,27 @@ resource "aws_subnet" "public_subnet_b" {
   }
 }
 
-resource "aws_subnet" "private_subnet" {
+
+
+resource "aws_subnet" "private_subnet_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "172.16.20.0/24"
   availability_zone = "us-east-1a"
   tags = {
-    Name = "projekat2-private-subnet"
+    Name = "projekat2-private-subnet-a"
   }
 }
+
+resource "aws_subnet" "private_subnet_b" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "172.16.21.0/24"
+  availability_zone = "us-east-1b"
+  tags = {
+    Name = "projekat2-private-subnet-b"
+  }
+}
+
+
 
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
@@ -80,7 +92,7 @@ resource "aws_route_table_association" "public_rt_assoc_b" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-# Security Groups
+
 
 resource "aws_security_group" "ec2_sg" {
   vpc_id = aws_vpc.main.id
@@ -165,7 +177,20 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
-# RDS Instance
+
+
+resource "aws_db_subnet_group" "rds_subnet_group" {
+  name       = "projekat2-rds-subnet-group"
+  subnet_ids = [
+    aws_subnet.private_subnet_a.id,
+    aws_subnet.private_subnet_b.id
+  ]
+  tags = {
+    Name = "projekat2-rds-subnet-group"
+  }
+}
+
+
 
 resource "aws_db_instance" "postgres" {
   identifier              = "projekat2-db"
@@ -184,15 +209,7 @@ resource "aws_db_instance" "postgres" {
   }
 }
 
-resource "aws_db_subnet_group" "rds_subnet_group" {
-  name       = "projekat2-rds-subnet-group"
-  subnet_ids = [aws_subnet.private_subnet.id, aws_subnet.public_subnet_a.id]
-  tags = {
-    Name = "projekat2-rds-subnet-group"
-  }
-}
 
-# Launch Templates
 
 resource "aws_launch_template" "frontend_lt" {
   name                 = "frontend-lt"
@@ -222,11 +239,11 @@ resource "aws_launch_template" "backend_lt" {
   }
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
   user_data             = base64encode(templatefile("${path.module}/user_data_backend.sh", {
-    repo_url    = var.repo_url,
+    repo_url     = var.repo_url,
     rds_endpoint = aws_db_instance.postgres.endpoint,
-    db_username = "postgres",
-    db_password = "postgres123",
-    db_name     = "app_db"
+    db_username  = "postgres",
+    db_password  = "postgres123",
+    db_name      = "app_db"
   }))
   tag_specifications {
     resource_type = "instance"
@@ -236,15 +253,15 @@ resource "aws_launch_template" "backend_lt" {
   }
 }
 
-# Auto Scaling Groups
+
 
 resource "aws_autoscaling_group" "frontend_asg" {
-  name               = "frontend-asg"
-  desired_capacity   = 2
-  max_size           = 2
-  min_size           = 2
+  name                = "frontend-asg"
+  desired_capacity    = 2
+  max_size            = 2
+  min_size            = 2
   vpc_zone_identifier = [aws_subnet.public_subnet_a.id, aws_subnet.public_subnet_b.id]
-  target_group_arns  = [aws_lb_target_group.frontend_tg.arn]
+  target_group_arns   = [aws_lb_target_group.frontend_tg.arn]
   launch_template {
     id      = aws_launch_template.frontend_lt.id
     version = "$Latest"
@@ -257,12 +274,12 @@ resource "aws_autoscaling_group" "frontend_asg" {
 }
 
 resource "aws_autoscaling_group" "backend_asg" {
-  name               = "backend-asg"
-  desired_capacity   = 2
-  max_size           = 2
-  min_size           = 2
+  name                = "backend-asg"
+  desired_capacity    = 2
+  max_size            = 2
+  min_size            = 2
   vpc_zone_identifier = [aws_subnet.public_subnet_a.id, aws_subnet.public_subnet_b.id]
-  target_group_arns  = [aws_lb_target_group.backend_tg.arn]
+  target_group_arns   = [aws_lb_target_group.backend_tg.arn]
   launch_template {
     id      = aws_launch_template.backend_lt.id
     version = "$Latest"
@@ -274,7 +291,7 @@ resource "aws_autoscaling_group" "backend_asg" {
   }
 }
 
-# Application Load Balancer
+
 
 resource "aws_lb" "app_alb" {
   name               = "projekat2-alb"
