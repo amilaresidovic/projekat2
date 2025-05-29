@@ -1,0 +1,20 @@
+version: "2.4"
+services:
+  backend:
+    build:
+      context: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_DEBUG=1
+      - FLASK_APP=main.py
+      - DATABASE_URL=postgresql://${DB_USERNAME}:${DB_PASSWORD}@${RDS_ENDPOINT}/${DB_NAME}
+    networks:
+      - app-network
+    command: flask run --host=0.0.0.0 --port=5000
+
+networks:
+  app-network:
+    driver: bridge
