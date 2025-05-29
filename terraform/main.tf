@@ -131,9 +131,9 @@ resource "aws_db_instance" "postgres" {
   engine_version         = "15.3"
   instance_class         = "db.t3.micro"
   allocated_storage      = var.ebs_size
-  name                   = "app_db"
+  db_name                   = "app_db"
   username               = "postgres"
-  password               = "postgres123"  # Promeni ako treba
+  password               = "postgres123"  
   parameter_group_name   = "default.postgres15"
   publicly_accessible    = true
   skip_final_snapshot    = true
@@ -142,7 +142,7 @@ resource "aws_db_instance" "postgres" {
   tags                   = { Name = "projekat2-postgres-rds" }
 }
 
-# User data template za frontend (pokreće samo frontend servis)
+
 data "template_file" "frontend_userdata" {
   template = <<EOF
 #!/bin/bash
@@ -161,7 +161,7 @@ docker-compose up -d frontend
 EOF
 }
 
-# User data template za backend (pokreće backend servis sa RDS endpointom)
+
 data "template_file" "backend_userdata" {
   template = <<EOF
 #!/bin/bash
@@ -177,10 +177,10 @@ chmod +x /usr/local/bin/docker-compose
 git clone ${var.repo_url} /home/ec2-user/projekat2
 cd /home/ec2-user/projekat2
 
-# Ubaci .env fajl sa RDS endpointom
+
 echo "RDS_ENDPOINT=${rds_endpoint}" > .env
 
-# Zameni placeholder u docker-compose.yml sa stvarnim RDS endpointom
+
 sed -i "s/\${RDS_ENDPOINT}/${rds_endpoint}/g" docker-compose.yml
 
 docker-compose up -d backend
