@@ -1,0 +1,19 @@
+#!/bin/bash
+exec > /var/log/user-data.log 2>&1
+set -x
+yum update -y
+yum install -y docker git -y
+systemctl start docker
+systemctl enable docker
+usermod -aG docker ec2-user
+
+curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+
+git clone ${repo_url} /home/ec2-user/projekat2
+cd /home/ec2-user/projekat2
+
+echo "RDS_ENDPOINT=${rds_endpoint}" > .env
+sed -i "s/\\${RDS_ENDPOINT}/${rds_endpoint}/g" docker-compose.yml
+
+docker-compose up -d backend

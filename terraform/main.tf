@@ -194,8 +194,11 @@ resource "aws_instance" "backend_instance" {
   subnet_id              = aws_subnet.public_subnet_b.id
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
   key_name               = "vockey"
-  user_data              = data.template_file.backend_userdata.rendered
-  tags                   = { Name = "projekat2-backend-instance" }
+  user_data              = templatefile("${path.module}/backend_user_data.sh.tmpl", {
+    repo_url     = var.repo_url
+    rds_endpoint = aws_db_instance.postgres.address
+  })
+  tags = { Name = "projekat2-backend-instance" }
 }
 
 resource "aws_lb" "app_alb" {
