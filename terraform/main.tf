@@ -16,7 +16,7 @@ resource "aws_vpc" "main" {
   cidr_block           = "172.16.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = { Name = "projekat2-vpc" }
+  tags                 = { Name = "projekat2-vpc" }
 }
 
 resource "aws_internet_gateway" "igw" {
@@ -124,19 +124,19 @@ resource "aws_db_subnet_group" "rds_subnet_group" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier            = "projekat2-postgres-db"
-  engine                = "postgres"
-  engine_version        = "15.3"
-  instance_class        = "db.t3.micro"
-  allocated_storage     = var.ebs_size
-  username              = "postgres"
-  password              = "postgres123" # Promeni po potrebi
-  parameter_group_name  = "default.postgres15"
-  publicly_accessible   = true
-  skip_final_snapshot   = true
+  identifier             = "projekat2-postgres-db"
+  engine                 = "postgres"
+  engine_version         = "15.3"
+  instance_class         = "db.t3.micro"
+  allocated_storage      = var.ebs_size
+  username               = "postgres"
+  password               = "postgres123" # Promeni po potrebi
+  parameter_group_name   = "default.postgres15"
+  publicly_accessible    = true
+  skip_final_snapshot    = true
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  db_subnet_group_name  = aws_db_subnet_group.rds_subnet_group.name
-  tags                  = { Name = "projekat2-postgres-rds" }
+  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
+  tags                   = { Name = "projekat2-postgres-rds" }
 }
 
 resource "aws_instance" "frontend_instance" {
@@ -160,7 +160,7 @@ git clone ${var.repo_url} /home/ec2-user/projekat2
 cd /home/ec2-user/projekat2
 docker-compose up -d frontend
 EOF
-  tags = { Name = "projekat2-frontend-instance" }
+  tags                   = { Name = "projekat2-frontend-instance" }
 }
 
 data "template_file" "backend_userdata" {
@@ -187,18 +187,21 @@ EOF
     rds_endpoint = aws_db_instance.postgres.endpoint
   }
 }
-
 resource "aws_instance" "backend_instance" {
   ami                    = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public_subnet_b.id
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
   key_name               = "vockey"
-  user_data              = templatefile("${path.module}/backend_user_data.sh.tmpl", {
+
+  user_data = templatefile("${path.module}/backend_user_data.sh.tmpl", {
     repo_url     = var.repo_url
     rds_endpoint = aws_db_instance.postgres.address
   })
-  tags = { Name = "projekat2-backend-instance" }
+
+  tags = {
+    Name = "projekat2-backend-instance"
+  }
 }
 
 resource "aws_lb" "app_alb" {
