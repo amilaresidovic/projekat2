@@ -6,12 +6,12 @@ services:
     ports:
       - "8080:8080"
     #volumes:
-     # - ./frontend:/app
+    # - ./frontend:/app
     networks:
       - app-network
     depends_on:
       - backend
-      environment:
+    environment:
       - ALLOWED_HOST=projekat2-alb-1030556733.us-east-1.elb.amazonaws.com
 
   backend:
@@ -28,8 +28,7 @@ services:
     networks:
       - app-network
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     command: flask run --host=0.0.0.0 --port=5000
 
   db:
