@@ -1,21 +1,16 @@
-from flask import request, jsonify
+from flask import Blueprint, request, jsonify
 from config import app, db
 from models import Contact
 
-with app.app_context():
-    db.create_all()
+api = Blueprint('api', __name__)
 
-@app.route('/')
-def home():
-    return "Hello, World!"
-
-@app.route("/contacts", methods=["GET"])
+@api.route('/contacts', methods=['GET'])
 def get_contacts():
     contacts = Contact.query.all()
-    json_contacts = list(map(lambda x: x.to_json(), contacts))
+    json_contacts = [c.to_json() for c in contacts]
     return jsonify({"contacts": json_contacts})
 
-@app.route("/create_contact", methods=["POST"])
+@api.route('/create_contact', methods=['POST'])
 def create_contact():
     first_name = request.json.get("firstName")
     last_name = request.json.get("lastName")
@@ -33,7 +28,7 @@ def create_contact():
 
     return jsonify({"message": "User created!"}), 201
 
-@app.route("/update_contact/<int:user_id>", methods=["PATCH"])
+@api.route('/update_contact/<int:user_id>', methods=['PATCH'])
 def update_contact(user_id):
     contact = Contact.query.get(user_id)
     if not contact:
@@ -47,7 +42,7 @@ def update_contact(user_id):
 
     return jsonify({"message": "User updated."}), 200
 
-@app.route("/delete_contact/<int:user_id>", methods=["DELETE"])
+@api.route('/delete_contact/<int:user_id>', methods=['DELETE'])
 def delete_contact(user_id):
     contact = Contact.query.get(user_id)
     if not contact:
@@ -57,6 +52,12 @@ def delete_contact(user_id):
     db.session.commit()
 
     return jsonify({"message": "User deleted!"}), 200
+
+app.register_blueprint(api, url_prefix='/api')
+
+@app.route('/')
+def home():
+    return "Hello, World!"
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
