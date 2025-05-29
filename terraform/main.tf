@@ -163,30 +163,7 @@ EOF
   tags                   = { Name = "projekat2-frontend-instance" }
 }
 
-data "template_file" "backend_userdata" {
-  template = <<EOF
-#!/bin/bash
-exec > /var/log/user-data.log 2>&1
-set -x
-yum update -y
-yum install -y docker git
-systemctl start docker
-systemctl enable docker
-usermod -aG docker ec2-user
-curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
-git clone ${repo_url} /home/ec2-user/projekat2
-cd /home/ec2-user/projekat2
-echo "RDS_ENDPOINT=${rds_endpoint}" > .env
-sed -i "s/\\${RDS_ENDPOINT}/${rds_endpoint}/g" docker-compose.yml
-docker-compose up -d backend
-EOF
 
-  vars = {
-    repo_url     = var.repo_url
-    rds_endpoint = aws_db_instance.postgres.endpoint
-  }
-}
 resource "aws_instance" "backend_instance" {
   ami                    = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
   instance_type          = var.instance_type

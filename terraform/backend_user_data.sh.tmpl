@@ -14,6 +14,5 @@ git clone ${repo_url} /home/ec2-user/projekat2
 cd /home/ec2-user/projekat2
 
 echo "RDS_ENDPOINT=${rds_endpoint}" > .env
-sed -i "s/\\$RDS_ENDPOINT/${rds_endpoint}/g" docker-compose.yml
 
 docker-compose up -d backend
