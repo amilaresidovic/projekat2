@@ -14,7 +14,6 @@ variable "ebs_size" {
 }
 
 variable "repo_url" {
-  type        = string
-  description = "GitHub repo URL"
-  default     = "https://github.com/tvojusername/projekat2"
+  description = "Git repository URL"
+  default     = "https://github.com/amilaresidovic/projekat2.git"
 }

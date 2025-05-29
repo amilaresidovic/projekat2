@@ -9,14 +9,14 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region = "us-east-1"
 }
 
 resource "aws_vpc" "main" {
   cidr_block           = "172.16.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags                 = { Name = "projekat2-vpc" }
+  tags = { Name = "projekat2-vpc" }
 }
 
 resource "aws_internet_gateway" "igw" {
@@ -40,6 +40,13 @@ resource "aws_subnet" "public_subnet_b" {
   tags                    = { Name = "projekat2-public-subnet-b" }
 }
 
+resource "aws_subnet" "private_subnet" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "172.16.20.0/24"
+  availability_zone = "us-east-1a"
+  tags              = { Name = "projekat2-private-subnet" }
+}
+
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
   route {
@@ -59,126 +66,100 @@ resource "aws_route_table_association" "public_rt_assoc_b" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-resource "aws_security_group" "alb_sg" {
-  name        = "alb-sg"
-  description = "Security group for ALB"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = { Name = "projekat2-alb-sg" }
-}
-
 resource "aws_security_group" "ec2_sg" {
-  name        = "ec2-sg"
-  description = "Security group for EC2 instances"
-  vpc_id      = aws_vpc.main.id
-
+  vpc_id = aws_vpc.main.id
+  name   = "ec2-sg"
   ingress {
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
   }
-
   ingress {
     from_port       = 5000
     to_port         = 5000
     protocol        = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
   }
-
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] 
   }
-
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
   tags = { Name = "projekat2-ec2-sg" }
 }
 
-resource "aws_db_subnet_group" "rds_subnet_group" {
-  name       = "projekat2-rds-subnet-group"
-  subnet_ids = [aws_subnet.public_subnet_a.id, aws_subnet.public_subnet_b.id]
-  tags       = { Name = "projekat2-rds-subnet-group" }
+resource "aws_security_group" "alb_sg" {
+  vpc_id = aws_vpc.main.id
+  name   = "alb-sg"
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = { Name = "projekat2-alb-sg" }
 }
 
-resource "aws_db_instance" "postgres" {
-  identifier             = "projekat2-postgres-db"
-  engine                 = "postgres"
-  engine_version         = "15.3"
-  instance_class         = "db.t3.micro"
-  allocated_storage      = var.ebs_size
-  username               = "postgres"
-  password               = "postgres123" # Promeni po potrebi
-  parameter_group_name   = "default.postgres15"
-  publicly_accessible    = true
-  skip_final_snapshot    = true
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
-  tags                   = { Name = "projekat2-postgres-rds" }
+resource "aws_ebs_volume" "db_volume" {
+  availability_zone = "us-east-1a"
+  size              = 10
+  type              = "gp2"
+  tags              = { Name = "projekat2-db-volume" }
 }
 
-resource "aws_instance" "frontend_instance" {
+resource "aws_instance" "app_instance" {
   ami                    = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-  instance_type          = var.instance_type
+  instance_type          = "t3.micro"
   subnet_id              = aws_subnet.public_subnet_a.id
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  iam_instance_profile   = "LabInstanceProfile"
   key_name               = "vockey"
   user_data              = <<EOF
 #!/bin/bash
-exec > /var/log/user-data.log 2>&1
-set -x
-yum update -y
-yum install -y docker git
-systemctl start docker
-systemctl enable docker
-usermod -aG docker ec2-user
-curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
-git clone ${var.repo_url} /home/ec2-user/projekat2
+exec > /var/log/user-data.log 2>&1 
+set -x 
+
+echo "Početak User Data skripte" >> /var/log/user-data.log
+sudo yum update -y
+sudo yum install -y docker git
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ec2-user
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+sudo mkfs.ext4 /dev/xvdf
+sudo mkdir -p /mnt/db_data
+sudo mount /dev/xvdf /mnt/db_data
+sudo chown ec2-user:ec2-user /mnt/db_data
+sudo mkdir -p /mnt/db_data/postgresql
+git clone https://github.com/amilaresidovic/projekat2.git /home/ec2-user/projekat2
 cd /home/ec2-user/projekat2
-docker-compose up -d frontend
+sudo ln -s /mnt/db_data/postgresql /home/ec2-user/projekat2/db_data
+sudo docker-compose build
+sudo docker-compose up -d
+echo "Završetak User Data skripte" >> /var/log/user-data.log
 EOF
-  tags                   = { Name = "projekat2-frontend-instance" }
+  tags = { Name = "projekat2-app-instance" }
 }
 
-
-resource "aws_instance" "backend_instance" {
-  ami                    = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-  instance_type          = var.instance_type
-  subnet_id              = aws_subnet.public_subnet_b.id
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
-  key_name               = "vockey"
-
-  user_data = templatefile("${path.module}/backend_user_data.sh.tmpl", {
-    repo_url     = var.repo_url
-    rds_endpoint = aws_db_instance.postgres.address
-  })
-
-  tags = {
-    Name = "projekat2-backend-instance"
-  }
+resource "aws_volume_attachment" "ebs_attachment" {
+  device_name = "/dev/xvdf"
+  volume_id   = aws_ebs_volume.db_volume.id
+  instance_id = aws_instance.app_instance.id
 }
 
 resource "aws_lb" "app_alb" {
@@ -214,7 +195,7 @@ resource "aws_lb_target_group" "backend_tg" {
   vpc_id      = aws_vpc.main.id
   target_type = "instance"
   health_check {
-    path                = "/"
+    path                = "/" 
     protocol            = "HTTP"
     matcher             = "200"
     interval            = 30
@@ -224,15 +205,15 @@ resource "aws_lb_target_group" "backend_tg" {
   }
 }
 
-resource "aws_lb_target_group_attachment" "frontend_attachment_1" {
+resource "aws_lb_target_group_attachment" "frontend_tg_attachment" {
   target_group_arn = aws_lb_target_group.frontend_tg.arn
-  target_id        = aws_instance.frontend_instance.id
+  target_id        = aws_instance.app_instance.id
   port             = 8080
 }
 
-resource "aws_lb_target_group_attachment" "backend_attachment_1" {
+resource "aws_lb_target_group_attachment" "backend_tg_attachment" {
   target_group_arn = aws_lb_target_group.backend_tg.arn
-  target_id        = aws_instance.backend_instance.id
+  target_id        = aws_instance.app_instance.id
   port             = 5000
 }
 
