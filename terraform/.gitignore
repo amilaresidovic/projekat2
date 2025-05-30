@@ -11,3 +11,4 @@ crash.log
 *.swp
 .env
 docker-compose.override.yml
+db_data/
