@@ -5,9 +5,14 @@ export default defineConfig({
   base: "/",
   plugins: [react()],
   server: {
-    host: true,           
     port: 8080,
     strictPort: true,
-    cors: true          
+    host: "0.0.0.0",
+    allowedHosts: [
+      "http://projekat2-alb-1614042885.us-east-1.elb.amazonaws.com/",
+      "localhost",
+      "127.0.0.1",
+    ],
+   
   },
 });
